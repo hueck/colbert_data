@@ -41,11 +41,16 @@ def process_functions(df: DataFrame) -> DataFrame:
     # remove package name in front of identifier (Observable.zipArray -> zipArray)
     df["clean_identifier"] = [clean_func_name(identifier) for identifier in
                               tqdm(df["identifier"], desc="Cleaning function identifiers")]
-    df["masked"] = [mask_function_name(str(code), identifier.split(".")[-1]) for code, identifier in
-                    tqdm(zip(df["code"], df["identifier"]), total=len(df.index),
-                         desc="Masking identifiers")]
+    df["code"] = [mask_function_name(str(code), identifier.split(".")[-1]) for code, identifier in
+                  tqdm(zip(df["code"], df["identifier"]), total=len(df.index),
+                       desc="Masking identifiers")]
     # remove any functions where the identifier was not masked properly
-    df = df[df["masked"].map(lambda x: " f(" in x)]
+    df = df[df["code"].map(lambda x: " f(" in x)].copy()
+
+    df["code"] = df["code"].apply(lambda x: x.replace("\t", " ").replace("\n", " ").replace("\r", " "))
+    # df["code"] = df["code"].apply(lambda x: " ".join(x.splitlines()))
+    # df["docstring"] = df["docstring"].apply(lambda x: " ".join(x.splitlines()))
+    df["docstring"] = df["docstring"].apply(lambda x: x.replace("\t", " ").replace("\n", " ").replace("\r", " "))
     return df
 
 
