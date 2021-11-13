@@ -96,18 +96,24 @@ if __name__ == '__main__':
 
     # build datasets
     result = dict.fromkeys(df["partition"].unique())
+    df["index"] = df.index
     for partition in df["partition"].unique():
         # split dataframe into train, test, validation set
         data_set = df[df["partition"] == partition].copy()
         # prepend docstring by identifier
-        # TODO maybe split into tokens?
         data_set["docstring"] = data_set["clean_identifier"] + " " + data_set["docstring"]
-        # drop unwanted columns
-        data_set = data_set[["docstring", "code"]]
         # add negative examples to dataframes
         data_set = add_negative_examples(data_set)
-        result[partition] = data_set
 
-    result["train"].to_csv(args["OUT_DIR"] + "/train.tsv", sep="\t", header=False, index=False)
-    result["valid"].to_csv(args["OUT_DIR"] + "/validate.tsv", sep="\t", header=False, index=False)
-    result["test"].to_csv(args["OUT_DIR"] + "/test.tsv", sep="\t", header=False, index=False)
+        train_data = data_set.loc[:, ["docstring", "code", "negative_example"]]
+        train_data.to_csv(args["OUT_DIR"] + f"/triples.{partition}.tsv", sep="\t", header=False, index=False)
+
+        collection_data = data_set.loc[:, ["index", "code"]]
+        collection_data.to_csv(args["OUT_DIR"] + f"/collection.{partition}.tsv", sep="\t", header=False, index=False)
+
+        query_data = data_set.loc[:, ["index", "docstring"]]
+        query_data.to_csv(args["OUT_DIR"] + f"/queries.{partition}.tsv", sep="\t", header=False, index=False)
+
+        qrels = pd.DataFrame({"index": data_set["index"], "0": [0 for _ in range(0, len(data_set.index))],
+                              "index2": data_set["index"], "1": [1 for _ in range(0, len(data_set.index))]})
+        qrels.to_csv(args["OUT_DIR"] + f"/qrels.{partition}.tsv", sep="\t", header=False, index=False)
