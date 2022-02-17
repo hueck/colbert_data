@@ -54,4 +54,4 @@ if __name__ == '__main__':
                               "query": [queries.data[key] for key in queries.keys()],
                               "url": urls})
 
-    result_df.to_csv(args["OUTPUT_DIR"] + "/predictions.csv", sep=",", index=False)
+    result_df.to_csv(args["OUT_DIR"] + "/predictions.csv", sep=",", index=False)
