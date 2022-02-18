@@ -10,6 +10,8 @@ https://github.com/github/CodeSearchNet#downloading-data-from-s3
 Usage:
     build_triples.py IN_DIR OUT_DIR
 
+Options:
+    IN_DIR Path to directory that contains subdirectories for the test, validation and training sets
 """
 import os
 import string
@@ -41,10 +43,10 @@ def clean_func_name(func_name):
     return func_name
 
 
-def add_negative_examples(data_set: DataFrame) -> DataFrame:
+def add_negative_examples(data_set: DataFrame, seed: int) -> DataFrame:
     """Generate negative examples."""
     # shuffle column of positive examples and use as negative examples
-    data_set["negative_example"] = data_set["code"].sample(frac=1, random_state=42).values
+    data_set["negative_example"] = data_set["code"].sample(frac=1, random_state=seed).values
     # make sure that every negative example is different from the positive example
     data_set["negative_example"] = data_set.apply(
         lambda row: get_negative_example(row, data_set)
@@ -59,35 +61,49 @@ def get_negative_example(row: Series, data_set: DataFrame) -> string:
     return row["negative_example"]
 
 
-if __name__ == '__main__':
-    args = docopt(__doc__, argv=None, help=True)
-    df = collect_data(args["IN_DIR"])
-
+def process_dataframe(df: DataFrame) -> DataFrame:
     df.drop(columns=["repo", "path", "sha", "partition"], inplace=True)
-
     # remove package reference in function name and strip underscores
     df["func_name"] = df["func_name"].apply(clean_func_name)
-
-    # create index column
-    df["index"] = df.index
-
+    # prepend docstring by identifier
+    # df["docstring"] = df["func_name"] + " " + df["docstring"]
     # remove tabs and newline symbols from code strings because ColBERT relies on these to parse tsv data
     df["code"] = df["code"].apply(lambda x: x.replace("\t", " ").replace("\n", " ").replace("\r", " "))
     df["docstring"] = df["docstring"].apply(lambda x: x.replace("\t", " ").replace("\n", " ").replace("\r", " "))
+    return df
 
-    # prepend docstring by identifier
-    # df["docstring"] = df["func_name"] + " " + df["docstring"]
 
-    # add negative examples to dataframes
-    df = add_negative_examples(df)
+if __name__ == '__main__':
+    args = docopt(__doc__, argv=None, help=True)
 
-    train_data = df.loc[:, ["docstring", "code", "negative_example"]]
+    in_dir = args["IN_DIR"]
+    train_df = collect_data(in_dir + "/train")
+    validation_df = collect_data(in_dir + "/valid")
+    test_df = collect_data(in_dir + "/test")
+
+    train_df = process_dataframe(train_df)
+    validation_df = process_dataframe(validation_df)
+    test_df = process_dataframe(test_df)
+
+    # add negative examples to training dataframe
+    train_df = add_negative_examples(train_df, 42)
+
+    train_data = train_df.loc[:, ["docstring", "code", "negative_example"]]
     train_data.to_csv(args["OUT_DIR"] + "/triples.tsv", sep="\t", header=False, index=False)
 
-    collection_data = df.loc[:, ["index", "code"]]
+    # generate a larger training dataset by using different negative examples
+    larger_train_df = pd.concat([train_df, add_negative_examples(train_df.copy(), seed=101010)], ignore_index=True)
+    larger_train_df = larger_train_df.loc[:, ["docstring", "code", "negative_example"]]
+    larger_train_df.to_csv(args["OUT_DIR"] + "/triples.upsampled.tsv", sep="\t", header=False, index=False)
+
+    # collection combines all functions from the three subsets
+    combined_df = pd.concat([train_df, validation_df, test_df], ignore_index=True)
+    # create index columns
+    combined_df["index"] = combined_df.index
+    collection_data = combined_df.loc[:, ["index", "code"]]
     collection_data.to_csv(args["OUT_DIR"] + "/collection.tsv", sep="\t", header=False, index=False)
 
     # save data for evaluation purposes and original code string for later use in retrieval application
-    evaluation_data = df.loc[:, ["index", "original_string", "url", "language", "func_name"]]
+    evaluation_data = combined_df.loc[:, ["index", "original_string", "url", "language", "func_name"]]
     # note the escape char because orginal_string contains tab and newline symbols
     evaluation_data.to_csv(args["OUT_DIR"] + "/full_data.tsv", sep="\t", header=True, index=False, escapechar="\\")
