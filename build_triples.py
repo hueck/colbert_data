@@ -14,6 +14,7 @@ Options:
     IN_DIR Path to directory that contains subdirectories for the test, validation and training sets
 """
 import os
+import re
 import string
 
 import pandas as pd
@@ -68,8 +69,9 @@ def process_dataframe(df: DataFrame) -> DataFrame:
     # prepend docstring by identifier
     # df["docstring"] = df["func_name"] + " " + df["docstring"]
     # remove tabs and newline symbols from code strings because ColBERT relies on these to parse tsv data
-    df["code"] = df["code"].apply(lambda x: x.replace("\t", " ").replace("\n", " ").replace("\r", " "))
-    df["docstring"] = df["docstring"].apply(lambda x: x.replace("\t", " ").replace("\n", " ").replace("\r", " "))
+    whitespaces = re.compile("\s+", flags=re.UNICODE)
+    df["code"] = df["code"].apply(lambda x: re.sub(whitespaces, " ", x))
+    df["docstring"] = df["docstring"].apply(lambda x: re.sub(whitespaces, " ", x))
     return df
 
 
