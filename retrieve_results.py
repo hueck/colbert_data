@@ -52,4 +52,4 @@ if __name__ == '__main__':
             results.append((language, queries.data[query_id], full_data.loc[collection_id, "url"]))
 
     result_df = pd.DataFrame(results, columns=["language", "query", "url"])
-    result_df.to_csv(args["OUT_DIR"] + "/predictions.csv", sep=",", index=False, header=False)
+    result_df.to_csv(args["OUT_DIR"] + "/predictions.csv", sep=",", index=False)
