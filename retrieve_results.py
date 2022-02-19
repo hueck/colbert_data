@@ -41,17 +41,15 @@ if __name__ == '__main__':
         indexer.index(name=index_name, collection=collection, overwrite=True)
 
         searcher = Searcher(index=index_name)
-        result = searcher.search_all(queries, k=5).todict()
+        result = searcher.search_all(queries, k=300).todict()
 
+    language = "Java"
     # join query_id with urls from full data
-    urls = []
-    for query_id, prediction in result.items():
-        collection_id, _, _ = prediction[0]
-        urls.append(full_data.loc[collection_id, "url"])
+    results = []
+    for query_id, predictions in result.items():
+        for collection_id, _, _ in predictions:
+            # note that the query text is saved, not the id
+            results.append((language, queries.data[query_id], full_data.loc[collection_id, "url"]))
 
-    # save results to dataframe (note that the query text is saved, not the id)
-    result_df = pd.DataFrame({"language": ["Java"] * len(urls),
-                              "query": [queries.data[key] for key in queries.keys()],
-                              "url": urls})
-
-    result_df.to_csv(args["OUT_DIR"] + "/predictions.csv", sep=",", index=False)
+    result_df = pd.DataFrame(results, columns=["language", "query", "url"])
+    result_df.to_csv(args["OUT_DIR"] + "/predictions.csv", sep=",", index=False, header=False)
