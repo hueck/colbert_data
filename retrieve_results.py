@@ -7,7 +7,7 @@ The script can be downloaded from:
 https://github.com/github/CodeSearchNet/blob/76a006fda591591f196fd0aef1d6282af3135f71/src/relevanceeval.py
 
 Usage:
-    retrieve_results.py PATH_QUERIES PATH_COLLECTION PATH_FULL_DATA PATH_COLBERT OUT_DIR EXPERIMENT_NAME [--gpus=<n>]
+    retrieve_results.py PATH_QUERIES PATH_COLLECTION PATH_FULL_DATA PATH_COLBERT OUT_DIR INDEX_NAME [--gpus=<n>]
 
 Options:
     PATH_QUERIES        path to tsv file with queries as produced by convert_query_file.py
@@ -16,7 +16,7 @@ Options:
         (needed to map the predicted id to an url, as needed by the relevanceeval.py script)
     PATH_COLBERT        path to ColBERT checkpoint
     OUT_DIR             path to output directory
-    EXPERIMENT_NAME     name of experiment (subdirectory with this name is created in OUT_DIR)
+    INDEX_NAME          name of index (subdirectory with this name is created in OUT_DIR)
     --gpus=<n>          number of gpus to use [default: 1]
 """
 from docopt import docopt
@@ -34,14 +34,15 @@ if __name__ == '__main__':
 
     f'Loaded {len(queries)} queries and {len(collection):,} passages'
 
-    with Run().context(RunConfig(nranks=int(args["--gpus"]), experiment=args["EXPERIMENT_NAME"])):
-        config = ColBERTConfig(index_path=args["OUT_DIR"] + "/index/" + args["EXPERIMENT_NAME"])
+    with Run().context(RunConfig(nranks=int(args["--gpus"]), experiment="colbert")):
+        config = ColBERTConfig(index_path=args["OUT_DIR"] + "/index/" + args["INDEX_NAME"])
         # build index
-        index_name = f'index'
+        index_name = args["INDEX_NAME"]
         indexer = Indexer(checkpoint=args["PATH_COLBERT"], config=config)
+        config = ColBERTConfig(index_path=args["OUT_DIR"] + "/" + args["INDEX_NAME"])
         indexer.index(name=index_name, collection=collection, overwrite=True)
 
-        searcher = Searcher(index=index_name)
+        searcher = Searcher(index=index_name, config=config)
         result = searcher.search_all(queries, k=300).todict()
 
     language = "Java"
