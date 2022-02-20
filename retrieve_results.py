@@ -21,10 +21,9 @@ Options:
 """
 from docopt import docopt
 import pandas as pd
-from colbert.infra import Run, RunConfig
+from colbert.infra import Run, RunConfig, ColBERTConfig
 from colbert.data import Queries, Collection
 from colbert import Indexer, Searcher
-from infra import ColBERTConfig
 
 if __name__ == '__main__':
     args = docopt(__doc__)
