@@ -19,7 +19,9 @@ if __name__ == '__main__':
 
     # for now only select Java queries
     language = "Java"
-    store = store.loc[store.Language == language]
+    store = set(store.loc[store.Language == language]["Query"])
+    store = pd.DataFrame(data=store, columns=["Query"])
+    store["index"] = store.index
 
     # ColBERT requires the index to be equal with the line number in the file starting from 0
     store.reset_index(inplace=True)
