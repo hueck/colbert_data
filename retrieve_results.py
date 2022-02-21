@@ -39,7 +39,6 @@ if __name__ == '__main__':
         # build index
         index_name = args["INDEX_NAME"]
         indexer = Indexer(checkpoint=args["PATH_COLBERT"], config=config)
-        config = ColBERTConfig(index_path=args["OUT_DIR"] + "/" + args["INDEX_NAME"])
         indexer.index(name=index_name, collection=collection, overwrite=True)
 
         searcher = Searcher(index=index_name, config=config)
@@ -54,4 +53,4 @@ if __name__ == '__main__':
             results.append((language, queries.data[query_id], full_data.loc[collection_id, "url"]))
 
     result_df = pd.DataFrame(results, columns=["language", "query", "url"])
-    result_df.to_csv(args["OUT_DIR"] + "/predictions.csv", sep=",", index=False)
+    result_df.to_csv(args["OUT_DIR"] + "/index/" + args["INDEX_NAME"] + "/predictions.csv", sep=",", index=False)
